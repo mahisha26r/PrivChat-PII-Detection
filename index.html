@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PrivChat – PII Detection</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #121212;
+      color: #ffffff;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 260px;
+      background: #1a1a1a;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      border-right: 2px solid #2a2a2a;
+    }
+    .sidebar h2 { color: #00ffcc; font-size: 1.2rem; }
+    #searchChats {
+      width: 100%;
+      padding: 0.45rem 0.6rem;
+      border-radius: 6px;
+      border: none;
+      background: #2a2a2a;
+      color: #fff;
+    }
+    .chat-entry {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.45rem 0.55rem;
+      background: #2a2a2a;
+      border-radius: 6px;
+      cursor: pointer;
+      gap: 0.35rem;
+    }
+    .chat-entry:hover { background: #333; }
+    .chat-entry input {
+      background: transparent;
+      border: none;
+      color: #fff;
+      width: 100%;
+      font-size: 1rem;
+    }
+    .delete-btn { color: #ff4d4d; cursor: pointer; flex-shrink: 0; }
+    .new-chat-btn {
+      margin-top: 0.3rem;
+      background: #00ffcc;
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      padding: 0.45rem 1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      overflow: hidden;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .header h1 { color: #00ffcc; font-size: 1.6rem; }
+
+    #chatDisplay {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .input-container {
+      display: flex;
+      gap: 1rem;
+    }
+    #userInput {
+      flex: 1;
+      padding: 0.75rem;
+      border-radius: 8px;
+      border: none;
+      font-size: 1rem;
+    }
+    .submit-btn {
+      padding: 0.75rem 1rem;
+      background: #00ffcc;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .chat-display {
+      background: #1e1e1e;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-top: 1rem;
+      box-shadow: 0 0 10px rgba(0, 255, 204, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+    .highlight {
+      border-radius: 4px;
+      padding: 0.1rem 0.3rem;
+      color: #000;
+    }
+    .label-btn {
+      display: inline-block;
+      border-radius: 12px;
+      padding: 0.3rem 0.75rem;
+      font-weight: bold;
+      margin: 0.2rem 0.45rem 0.2rem 0;
+      color: #000;
+    }
+    .warning   { color: #ffae00; font-weight: bold; }
+    .no-warning{ color: #4caf50; font-weight: bold; }
+    .entities-header { font-style: italic; color: #ccc; margin-bottom: 0.3rem; }
+    .entities-list   { color: #ccc; }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>📑 Chats</h2>
+    <input id="searchChats" placeholder="Search…" oninput="renderSidebar()">
+    <div id="chatList"></div>
+    <button class="new-chat-btn" onclick="startNewChat()">➕ New Chat</button>
+  </div>
+
+  <div class="main">
+    <div class="header"><h1>PrivChat – PII Detection</h1></div>
+
+    <div id="chatDisplay"></div>
+
+    <div class="input-container">
+      <input type="text" id="userInput" placeholder="Type your message…">
+      <button class="submit-btn" onclick="handleSubmit()">Submit</button>
+    </div>
+  </div>
+
+<script>
+let currentChatId = null;
+const chats = {};
+
+const labelColors = {
+  PERSON: '#ff6f61',
+  DATE:   '#ffcc00',
+  PHONE:  '#9c27b0',
+  EMAIL:  '#2196f3',
+  ORG:    '#4caf50',
+  GPE:    '#03a9f4',
+  LOC:    '#00bcd4',
+  NORP:   '#607d8b',
+  DEFAULT:'#00ffcc'
+};
+const colorFor = label => labelColors[label] || labelColors.DEFAULT;
+
+function startNewChat() {
+  const id = `chat-${Date.now()}`;
+  chats[id] = { title: 'Untitled Chat', messages: [] };
+  currentChatId = id;
+  renderSidebar();
+  renderChat();
+}
+
+function renderSidebar() {
+  const list   = document.getElementById('chatList');
+  const filter = (document.getElementById('searchChats').value || '').toLowerCase();
+  list.innerHTML = '';
+  for (const id in chats) {
+    if (!chats[id].title.toLowerCase().includes(filter)) continue;
+
+    const div = document.createElement('div');
+    div.className = 'chat-entry';
+
+    const input = document.createElement('input');
+    input.value = chats[id].title;
+    input.readOnly = true;
+    input.ondblclick = () => { input.readOnly = false; input.focus(); };
+    input.onblur    = () => { input.readOnly = true; if (!input.value.trim()) input.value = 'Untitled Chat'; chats[id].title = input.value; };
+    div.onclick = e => { if (e.target.className !== 'delete-btn') { currentChatId = id; renderChat(); } };
+
+    const del = document.createElement('span');
+    del.textContent = '🗑️';
+    del.className = 'delete-btn';
+    del.onclick = e => { e.stopPropagation(); delete chats[id]; if (currentChatId === id) currentChatId = null; renderSidebar(); renderChat(); };
+
+    div.appendChild(input);
+    div.appendChild(del);
+    list.appendChild(div);
+  }
+}
+
+async function handleSubmit() {
+  const inp  = document.getElementById('userInput');
+  const text = inp.value.trim();
+  if (!text || !currentChatId) return;
+  try {
+    const res  = await fetch('http://localhost:8000/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: text })
+    });
+    const data = await res.json();
+
+    chats[currentChatId].messages.push({
+      input: text,
+      entities: data.entities,
+      response: data.llm_response,
+      pii: data.pii_detected
+    });
+  } catch (err) {
+    chats[currentChatId].messages.push({ input: text, entities: [], response: '⚠️ LLM did not respond.', pii: false });
+  }
+  inp.value = '';
+  renderChat();
+}
+
+function highlightInput(text, entities) {
+  let result = text;
+  const sorted = [...entities].sort((a, b) => b.text.length - a.text.length);
+  sorted.forEach(({ text: entText, label }) => {
+    const color = colorFor(label);
+    const span  = `<span class="highlight" style="background:${color};">${entText}</span>`;
+    result = result.replace(new RegExp(entText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), span);
+  });
+  return result;
+}
+
+function renderChat() {
+  const container = document.getElementById('chatDisplay');
+  container.innerHTML = '';
+  if (!currentChatId || !chats[currentChatId]) return;
+
+  chats[currentChatId].messages.forEach(({ input, entities, response, pii }) => {
+    const card = document.createElement('div');
+    card.className = 'chat-display';
+
+    const headerRow = document.createElement('div');
+    headerRow.style.display = 'flex';
+    headerRow.style.justifyContent = 'space-between';
+
+    const userHtml = `<strong>User Input:</strong> ${highlightInput(input, entities)}`;
+    const left     = document.createElement('div');
+    left.innerHTML = userHtml;
+
+    const right = document.createElement('span');
+    right.className = pii ? 'warning' : 'no-warning';
+    right.textContent = pii ? '⚠️ PII detected' : '✅ No PII detected';
+
+    headerRow.appendChild(left);
+    headerRow.appendChild(right);
+    card.appendChild(headerRow);
+
+    const details = document.createElement('div');
+    details.className = 'chat-section';
+    if (entities.length) {
+      details.innerHTML = '<div class="entities-header">Detected PII (sanitized before sending to API):</div>';
+      const grouped = entities.reduce((acc, e) => {
+        (acc[e.label] = acc[e.label] || []).push(e.text);
+        return acc;
+      }, {});
+      for (const label in grouped) {
+        const color = colorFor(label);
+        const badge = `<span class="label-btn" style="background:${color};">${label}</span>`;
+        details.innerHTML += `${badge} <span class="entities-list">${grouped[label].join(', ')}</span><br>`;
+      }
+    } else {
+      details.innerHTML = '<em>No named entities detected.</em>';
+    }
+    card.appendChild(details);
+
+    const llmResp = document.createElement('div');
+    llmResp.className = 'chat-section';
+    llmResp.innerHTML = `<strong>LLM Response:</strong><br>${response}`;
+    card.appendChild(llmResp);
+
+    container.appendChild(card);
+  });
+}
+
+startNewChat();
+</script>
+</body>
+</html>
