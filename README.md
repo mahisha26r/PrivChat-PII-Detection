@@ -46,3 +46,53 @@ PrivChat is a privacy-focused chatbot API that:
 ```bash
 pip install fastapi uvicorn requests spacy
 python -m spacy download en_core_web_sm
+
+### Running the API
+
+'''bash
+uvicorn app:app --reload --port 8000
+
+-Make sure Ollama is running and the tinyllama:1.1b model is available.
+
+### 📁 API Usage
+-Endpoint: POST /process
+
+-Request
+'''bash
+{
+  "prompt": "Your input text with potential PII"
+}
+-Response
+
+'''bash
+{
+  "entities": [{"text": "...", "label": "..."}],
+  "highlighted_text": "<mark>...</mark>",
+  "llm_response": "response from LLM",
+  "pii_detected": true
+}
+
+###🖼️ Web Interface Preview
+Sidebar chat history, entity highlights, grouped badges, and TinyLLaMA responses in action.
+
+Include a screenshot like this:
+
+markdown
+Copy
+Edit
+📂 project-root/
+ └── assets/
+     └── privchat_ui.png
+markdown
+Copy
+Edit
+![PrivChat Screenshot](assets/privchat_ui.png)
+
+### 📌 Entity Types Detected
+EMAIL, PHONE, ID_PAN, ID_AADHAAR, SSN, ID_PASSPORT
+
+DL_NUMBER, CARD_NUMBER, CARD_SUFFIX, BANK_ACCOUNT
+
+STUDENT_ID, VEHICLE_REG, DATE
+
+
