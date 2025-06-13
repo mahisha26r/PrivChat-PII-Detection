@@ -32,8 +32,9 @@ PrivChat is a privacy-focused chatbot API that:
 - **Deployment**: Localhost  
 
 ---
-The Video Demo of the website is available in this link https://youtu.be/YD3OxzcQ4wE
-The Project Report of the 
+-The comprehensive project report of the website saying about its architecture ,process, evalution and test case detections is present in this repository. 
+-The Video Demo of the website is available in this link https://youtu.be/YD3OxzcQ4wE
+
 
 ## 🚀 Setup Instructions
 
