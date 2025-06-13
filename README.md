@@ -32,6 +32,8 @@ PrivChat is a privacy-focused chatbot API that:
 - **Deployment**: Localhost  
 
 ---
+The Video Demo of the website is available in this link https://youtu.be/YD3OxzcQ4wE
+The Project Report of the 
 
 ## 🚀 Setup Instructions
 
@@ -47,5 +49,6 @@ PrivChat is a privacy-focused chatbot API that:
 pip install fastapi uvicorn requests spacy
 python -m spacy download en_core_web_sm
 uvicorn app:app --reload --port 8000
+
 
 
