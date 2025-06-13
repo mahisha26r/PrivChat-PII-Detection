@@ -41,15 +41,11 @@ PrivChat is a privacy-focused chatbot API that:
 - Ollama with `tinyllama:1.1b` model pulled  
 - spaCy model installed  
 
-### Installation
+### Installation and Running the API
 
 ```bash
 pip install fastapi uvicorn requests spacy
 python -m spacy download en_core_web_sm
-
-### Running the API
-
-```bash
 uvicorn app:app --reload --port 8000
 
 
